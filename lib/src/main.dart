@@ -9,11 +9,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'models/candle.dart';
 import 'dart:io' show Platform;
-import 'package:macos_kairos/view_models/home_page_view_model.dart';
-import 'package:macos_kairos/common/stock_func.dart';
-import 'package:macos_kairos/theme.dart';
-import 'package:provider/provider.dart';
-import 'package:macos_kairos/models/theme.dart';
+// import 'package:macos_kairos/view_models/home_page_view_model.dart';
+// import 'package:macos_kairos/common/stock_func.dart';
+// import 'package:macos_kairos/theme.dart';
+// import 'package:provider/provider.dart';
+// import 'package:macos_kairos/models/theme.dart';
 
 /// StatefulWidget that holds Chart's State (index of
 /// current position and candles width).
@@ -22,7 +22,7 @@ class Candlesticks extends StatefulWidget {
   ///  the newest item is in position 0
   final List<Candle> candles;
 
-  final KrStockViewModel krstock;
+  //final KrStockViewModel krstock;
 
   /// this callback calls when the last candle gets visible
   final Future<void> Function()? onLoadMoreCandles;
@@ -33,7 +33,7 @@ class Candlesticks extends StatefulWidget {
   Candlesticks({
     Key? key,
     required this.candles,
-    required this.krstock,
+    //required this.krstock,
     this.onLoadMoreCandles,
     this.actions = const [],
   }) : super(key: key);
@@ -56,68 +56,62 @@ class _CandlesticksState extends State<Candlesticks> {
   /// true when widget.onLoadMoreCandles is fetching new candles.
   bool isCallingLoadMore = false;
 
-  // var krStrStockPrice = changePriceFormat(widget.krstock.price);
-
-  // if (krStrStockPrice.substring(0, 1) == '-') {
-  //   krStrStockPrice = krStrStockPrice.substring(1);
-  // }
-
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         // Chart Title 작성 - 심정민
-        Container(
-          height: 48,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(15.0),
-                child: Image.asset(
-                  'assets/images/ci/${widget.krstock.code}.png',
-                  width: 35.0,
-                  height: 35.0,
-                ),
-              ),
-              Text(
-                widget.krstock.name,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              Text(
-                changePriceFormat(widget.krstock.price),
-                textAlign: TextAlign.center,
-                style: "${widget.krstock.price}".substring(0, 1) == "-"
-                    ? Theme.of(context).textTheme.bodyMedium!.copyWith(
-                        color: Provider.of<ThemeModel>(context).themeType ==
-                                ThemeType.Light
-                            ? lightThemeNegativeColor
-                            : darkThemeNegativeColor,
-                        fontSize: 15)
-                    : Theme.of(context).textTheme.bodyMedium!.copyWith(
-                        color: Provider.of<ThemeModel>(context).themeType ==
-                                ThemeType.Light
-                            ? lightThemePositiveColor
-                            : darkThemePositiveColor,
-                        fontSize: 15),
-              ),
-              Text("${widget.krstock.diffRatio}%",
-                  style: "${widget.krstock.diffRatio}".substring(0, 1) == "-"
-                      ? Theme.of(context).textTheme.bodyMedium!.copyWith(
-                          color: Provider.of<ThemeModel>(context).themeType ==
-                                  ThemeType.Light
-                              ? lightThemeNegativeColor
-                              : darkThemeNegativeColor)
-                      : Theme.of(context).textTheme.bodyMedium!.copyWith(
-                          color: Provider.of<ThemeModel>(context).themeType ==
-                                  ThemeType.Light
-                              ? lightThemePositiveColor
-                              : darkThemePositiveColor)),
-              Text("거래량 : ${changePriceFormat(widget.krstock.volumn)}")
-            ],
-          ),
-        ),
+        // Container(
+        //   height: 48,
+        //   child: Row(
+        //     mainAxisAlignment: MainAxisAlignment.spaceAround,
+        //     children: [
+        //       ClipRRect(
+        //         borderRadius: BorderRadius.circular(15.0),
+        //         child: Image.asset(
+        //           'assets/images/ci/${widget.krstock.code}.png',
+        //           width: 35.0,
+        //           height: 35.0,
+        //         ),
+        //       ),
+        //       Text(
+        //         widget.krstock.name,
+        //         textAlign: TextAlign.center,
+        //         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        //       ),
+        //       Text(
+        //         changePriceFormat(widget.krstock.price),
+        //         textAlign: TextAlign.center,
+        //         style: "${widget.krstock.price}".substring(0, 1) == "-"
+        //             ? Theme.of(context).textTheme.bodyMedium!.copyWith(
+        //                 color: Provider.of<ThemeModel>(context).themeType ==
+        //                         ThemeType.Light
+        //                     ? lightThemeNegativeColor
+        //                     : darkThemeNegativeColor,
+        //                 fontSize: 15)
+        //             : Theme.of(context).textTheme.bodyMedium!.copyWith(
+        //                 color: Provider.of<ThemeModel>(context).themeType ==
+        //                         ThemeType.Light
+        //                     ? lightThemePositiveColor
+        //                     : darkThemePositiveColor,
+        //                 fontSize: 15),
+        //       ),
+        //       Text("${widget.krstock.diffRatio}%",
+        //           style: "${widget.krstock.diffRatio}".substring(0, 1) == "-"
+        //               ? Theme.of(context).textTheme.bodyMedium!.copyWith(
+        //                   color: Provider.of<ThemeModel>(context).themeType ==
+        //                           ThemeType.Light
+        //                       ? lightThemeNegativeColor
+        //                       : darkThemeNegativeColor)
+        //               : Theme.of(context).textTheme.bodyMedium!.copyWith(
+        //                   color: Provider.of<ThemeModel>(context).themeType ==
+        //                           ThemeType.Light
+        //                       ? lightThemePositiveColor
+        //                       : darkThemePositiveColor)),
+        //       Text("거래량 : ${changePriceFormat(widget.krstock.volumn)}")
+        //     ],
+        //   ),
+        // ),
         ToolBar(
           onZoomInPressed: () {
             setState(() {
