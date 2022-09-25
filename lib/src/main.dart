@@ -1,42 +1,65 @@
 import 'dart:math';
-import 'package:candlesticks/src/models/candle.dart';
-import 'package:candlesticks/src/theme/theme_data.dart';
-import 'package:candlesticks/src/widgets/toolbar_action.dart';
+import 'package:candlesticks/candlesticks.dart';
+import 'package:candlesticks/src/models/main_window_indicator.dart';
 import 'package:candlesticks/src/widgets/mobile_chart.dart';
 import 'package:candlesticks/src/widgets/desktop_chart.dart';
 import 'package:candlesticks/src/widgets/toolbar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'models/candle.dart';
 import 'dart:io' show Platform;
-// import 'package:macos_kairos/view_models/home_page_view_model.dart';
-// import 'package:macos_kairos/common/stock_func.dart';
-// import 'package:macos_kairos/theme.dart';
-// import 'package:provider/provider.dart';
-// import 'package:macos_kairos/models/theme.dart';
+
+enum ChartAdjust {
+  /// Will adjust chart size by max and min value from visible area
+  visibleRange,
+
+  /// Will adjust chart size by max and min value from the whole data
+  fullRange
+}
 
 /// StatefulWidget that holds Chart's State (index of
 /// current position and candles width).
 class Candlesticks extends StatefulWidget {
   /// The arrangement of the array should be such that
-  ///  the newest item is in position 0
+  /// the newest item is in position 0
   final List<Candle> candles;
 
-  //final KrStockViewModel krstock;
-
-  /// this callback calls when the last candle gets visible
+  /// This callback calls when the last candle gets visible
   final Future<void> Function()? onLoadMoreCandles;
 
-  /// list of buttons you what to add on top tool bar
+  /// List of buttons you what to add on top tool bar
   final List<ToolBarAction> actions;
 
-  Candlesticks({
+  /// List of indicators to draw
+  final List<Indicator>? indicators;
+
+  /// This callback calls when ever user clicks a spcesific indicator close button (X)
+  final void Function(String)? onRemoveIndicator;
+
+  /// How chart price range will be adjusted when moving chart
+  final ChartAdjust chartAdjust;
+
+  /// Will zoom buttons be displayed in toolbar
+  final bool displayZoomActions;
+
+  /// Custom loading widget
+  final Widget? loadingWidget;
+
+  final CandleSticksStyle? style;
+
+  const Candlesticks({
     Key? key,
     required this.candles,
-    //required this.krstock,
     this.onLoadMoreCandles,
     this.actions = const [],
-  }) : super(key: key);
+    this.chartAdjust = ChartAdjust.visibleRange,
+    this.displayZoomActions = true,
+    this.loadingWidget,
+    this.indicators,
+    this.onRemoveIndicator,
+    this.style,
+  })  : assert(candles.length == 0 || candles.length > 1,
+            "Please provide at least 2 candles"),
+        super(key: key);
 
   @override
   _CandlesticksState createState() => _CandlesticksState();
@@ -56,83 +79,103 @@ class _CandlesticksState extends State<Candlesticks> {
   /// true when widget.onLoadMoreCandles is fetching new candles.
   bool isCallingLoadMore = false;
 
+  MainWindowDataContainer? mainWindowDataContainer;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.candles.length == 0) {
+      return;
+    }
+    if (mainWindowDataContainer == null) {
+      mainWindowDataContainer =
+          MainWindowDataContainer(widget.indicators ?? [], widget.candles);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant Candlesticks oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.candles.length == 0) {
+      return;
+    }
+    if (mainWindowDataContainer == null) {
+      mainWindowDataContainer =
+          MainWindowDataContainer(widget.indicators ?? [], widget.candles);
+    } else {
+      final currentIndicators = widget.indicators ?? [];
+      final oldIndicators = oldWidget.indicators ?? [];
+      if (currentIndicators.length == oldIndicators.length) {
+        for (int i = 0; i < currentIndicators.length; i++) {
+          if (currentIndicators[i] == oldIndicators[i]) {
+            continue;
+          } else {
+            mainWindowDataContainer = MainWindowDataContainer(
+                widget.indicators ?? [], widget.candles);
+            return;
+          }
+        }
+      } else {
+        mainWindowDataContainer =
+            MainWindowDataContainer(widget.indicators ?? [], widget.candles);
+        return;
+      }
+      try {
+        mainWindowDataContainer!.tickUpdate(widget.candles);
+      } catch (_) {
+        mainWindowDataContainer =
+            MainWindowDataContainer(widget.indicators ?? [], widget.candles);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final style = widget.style ??
+        (Theme.of(context).brightness == Brightness.dark
+            ? CandleSticksStyle.dark()
+            : CandleSticksStyle.light());
     return Column(
       children: [
-        // Chart Title 작성 - 심정민
-        // Container(
-        //   height: 48,
-        //   child: Row(
-        //     mainAxisAlignment: MainAxisAlignment.spaceAround,
-        //     children: [
-        //       ClipRRect(
-        //         borderRadius: BorderRadius.circular(15.0),
-        //         child: Image.asset(
-        //           'assets/images/ci/${widget.krstock.code}.png',
-        //           width: 35.0,
-        //           height: 35.0,
-        //         ),
-        //       ),
-        //       Text(
-        //         widget.krstock.name,
-        //         textAlign: TextAlign.center,
-        //         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        //       ),
-        //       Text(
-        //         changePriceFormat(widget.krstock.price),
-        //         textAlign: TextAlign.center,
-        //         style: "${widget.krstock.price}".substring(0, 1) == "-"
-        //             ? Theme.of(context).textTheme.bodyMedium!.copyWith(
-        //                 color: Provider.of<ThemeModel>(context).themeType ==
-        //                         ThemeType.Light
-        //                     ? lightThemeNegativeColor
-        //                     : darkThemeNegativeColor,
-        //                 fontSize: 15)
-        //             : Theme.of(context).textTheme.bodyMedium!.copyWith(
-        //                 color: Provider.of<ThemeModel>(context).themeType ==
-        //                         ThemeType.Light
-        //                     ? lightThemePositiveColor
-        //                     : darkThemePositiveColor,
-        //                 fontSize: 15),
-        //       ),
-        //       Text("${widget.krstock.diffRatio}%",
-        //           style: "${widget.krstock.diffRatio}".substring(0, 1) == "-"
-        //               ? Theme.of(context).textTheme.bodyMedium!.copyWith(
-        //                   color: Provider.of<ThemeModel>(context).themeType ==
-        //                           ThemeType.Light
-        //                       ? lightThemeNegativeColor
-        //                       : darkThemeNegativeColor)
-        //               : Theme.of(context).textTheme.bodyMedium!.copyWith(
-        //                   color: Provider.of<ThemeModel>(context).themeType ==
-        //                           ThemeType.Light
-        //                       ? lightThemePositiveColor
-        //                       : darkThemePositiveColor)),
-        //       Text("거래량 : ${changePriceFormat(widget.krstock.volumn)}")
-        //     ],
-        //   ),
-        // ),
-        ToolBar(
-          onZoomInPressed: () {
-            setState(() {
-              candleWidth += 2;
-              candleWidth = min(candleWidth, 16);
-            });
-          },
-          onZoomOutPressed: () {
-            setState(() {
-              candleWidth -= 2;
-              candleWidth = max(candleWidth, 4);
-            });
-          },
-          children: widget.actions,
-        ),
-        if (widget.candles.length == 0)
+        if (widget.displayZoomActions == true || widget.actions.isNotEmpty) ...[
+          ToolBar(
+            color: style.toolBarColor,
+            children: [
+              if (widget.displayZoomActions) ...[
+                ToolBarAction(
+                  onPressed: () {
+                    setState(() {
+                      candleWidth -= 2;
+                      candleWidth = max(candleWidth, 2);
+                    });
+                  },
+                  child: Icon(
+                    Icons.remove,
+                    color: style.borderColor,
+                  ),
+                ),
+                ToolBarAction(
+                  onPressed: () {
+                    setState(() {
+                      candleWidth += 2;
+                      candleWidth = min(candleWidth, 20);
+                    });
+                  },
+                  child: Icon(
+                    Icons.add,
+                    color: style.borderColor,
+                  ),
+                ),
+              ],
+              ...widget.actions
+            ],
+          ),
+        ],
+        if (widget.candles.length == 0 || mainWindowDataContainer == null)
           Expanded(
             child: Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).gold,
-              ),
+              child: widget.loadingWidget ??
+                  CircularProgressIndicator(color: style.loadingColor),
             ),
           )
         else
@@ -146,13 +189,17 @@ class _CandlesticksState extends State<Candlesticks> {
                     Platform.isWindows ||
                     Platform.isLinux) {
                   return DesktopChart(
+                    style: style,
+                    onRemoveIndicator: widget.onRemoveIndicator,
+                    mainWindowDataContainer: mainWindowDataContainer!,
+                    chartAdjust: widget.chartAdjust,
                     onScaleUpdate: (double scale) {
                       scale = max(0.90, scale);
                       scale = min(1.1, scale);
                       setState(() {
                         candleWidth *= scale;
-                        candleWidth = min(candleWidth, 16);
-                        candleWidth = max(candleWidth, 4);
+                        candleWidth = min(candleWidth, 20);
+                        candleWidth = max(candleWidth, 2);
                       });
                     },
                     onPanEnd: () {
@@ -185,13 +232,17 @@ class _CandlesticksState extends State<Candlesticks> {
                   );
                 } else {
                   return MobileChart(
+                    style: style,
+                    onRemoveIndicator: widget.onRemoveIndicator,
+                    mainWindowDataContainer: mainWindowDataContainer!,
+                    chartAdjust: widget.chartAdjust,
                     onScaleUpdate: (double scale) {
                       scale = max(0.90, scale);
                       scale = min(1.1, scale);
                       setState(() {
                         candleWidth *= scale;
-                        candleWidth = min(candleWidth, 16);
-                        candleWidth = max(candleWidth, 4);
+                        candleWidth = min(candleWidth, 20);
+                        candleWidth = max(candleWidth, 2);
                       });
                     },
                     onPanEnd: () {
