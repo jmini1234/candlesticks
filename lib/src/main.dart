@@ -1,65 +1,35 @@
 import 'dart:math';
-import 'package:candlesticks/candlesticks.dart';
-import 'package:candlesticks/src/models/main_window_indicator.dart';
+import 'package:candlesticks/src/models/candle.dart';
+import 'package:candlesticks/src/theme/theme_data.dart';
+import 'package:candlesticks/src/widgets/toolbar_action.dart';
 import 'package:candlesticks/src/widgets/mobile_chart.dart';
 import 'package:candlesticks/src/widgets/desktop_chart.dart';
 import 'package:candlesticks/src/widgets/toolbar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'models/candle.dart';
 import 'dart:io' show Platform;
-
-enum ChartAdjust {
-  /// Will adjust chart size by max and min value from visible area
-  visibleRange,
-
-  /// Will adjust chart size by max and min value from the whole data
-  fullRange
-}
 
 /// StatefulWidget that holds Chart's State (index of
 /// current position and candles width).
 class Candlesticks extends StatefulWidget {
   /// The arrangement of the array should be such that
-  /// the newest item is in position 0
+  ///  the newest item is in position 0
   final List<Candle> candles;
 
-  /// This callback calls when the last candle gets visible
+  /// this callback calls when the last candle gets visible
   final Future<void> Function()? onLoadMoreCandles;
 
-  /// List of buttons you what to add on top tool bar
+  /// list of buttons you what to add on top tool bar
   final List<ToolBarAction> actions;
 
-  /// List of indicators to draw
-  final List<Indicator>? indicators;
-
-  /// This callback calls when ever user clicks a spcesific indicator close button (X)
-  final void Function(String)? onRemoveIndicator;
-
-  /// How chart price range will be adjusted when moving chart
-  final ChartAdjust chartAdjust;
-
-  /// Will zoom buttons be displayed in toolbar
-  final bool displayZoomActions;
-
-  /// Custom loading widget
-  final Widget? loadingWidget;
-
-  final CandleSticksStyle? style;
-
-  const Candlesticks({
+  Candlesticks({
     Key? key,
     required this.candles,
+    //required this.krstock,
     this.onLoadMoreCandles,
     this.actions = const [],
-    this.chartAdjust = ChartAdjust.visibleRange,
-    this.displayZoomActions = true,
-    this.loadingWidget,
-    this.indicators,
-    this.onRemoveIndicator,
-    this.style,
-  })  : assert(candles.length == 0 || candles.length > 1,
-            "Please provide at least 2 candles"),
-        super(key: key);
+  }) : super(key: key);
 
   @override
   _CandlesticksState createState() => _CandlesticksState();
@@ -79,103 +49,45 @@ class _CandlesticksState extends State<Candlesticks> {
   /// true when widget.onLoadMoreCandles is fetching new candles.
   bool isCallingLoadMore = false;
 
-  MainWindowDataContainer? mainWindowDataContainer;
 
+  // TODO : 종목 클릭 했을 때 인덱스 저장되는 현상 개선
   @override
-  void initState() {
-    super.initState();
-    if (widget.candles.length == 0) {
-      return;
-    }
-    if (mainWindowDataContainer == null) {
-      mainWindowDataContainer =
-          MainWindowDataContainer(widget.indicators ?? [], widget.candles);
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant Candlesticks oldWidget) {
+  void didUpdateWidget(Candlesticks oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.candles.length == 0) {
-      return;
-    }
-    if (mainWindowDataContainer == null) {
-      mainWindowDataContainer =
-          MainWindowDataContainer(widget.indicators ?? [], widget.candles);
-    } else {
-      final currentIndicators = widget.indicators ?? [];
-      final oldIndicators = oldWidget.indicators ?? [];
-      if (currentIndicators.length == oldIndicators.length) {
-        for (int i = 0; i < currentIndicators.length; i++) {
-          if (currentIndicators[i] == oldIndicators[i]) {
-            continue;
-          } else {
-            mainWindowDataContainer = MainWindowDataContainer(
-                widget.indicators ?? [], widget.candles);
-            return;
-          }
-        }
-      } else {
-        mainWindowDataContainer =
-            MainWindowDataContainer(widget.indicators ?? [], widget.candles);
-        return;
-      }
-      try {
-        mainWindowDataContainer!.tickUpdate(widget.candles);
-      } catch (_) {
-        mainWindowDataContainer =
-            MainWindowDataContainer(widget.indicators ?? [], widget.candles);
-      }
+    //if((widget.candles.length == 100 || widget.candles.length == 200) || (this.widget != oldWidget))
+    if(widget.candles.length == 100)
+    {
+      index = -10;
+      lastX = 0;
+      lastIndex = 0;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final style = widget.style ??
-        (Theme.of(context).brightness == Brightness.dark
-            ? CandleSticksStyle.dark()
-            : CandleSticksStyle.light());
     return Column(
       children: [
-        if (widget.displayZoomActions == true || widget.actions.isNotEmpty) ...[
-          ToolBar(
-            color: style.toolBarColor,
-            children: [
-              if (widget.displayZoomActions) ...[
-                ToolBarAction(
-                  onPressed: () {
-                    setState(() {
-                      candleWidth -= 2;
-                      candleWidth = max(candleWidth, 2);
-                    });
-                  },
-                  child: Icon(
-                    Icons.remove,
-                    color: style.borderColor,
-                  ),
-                ),
-                ToolBarAction(
-                  onPressed: () {
-                    setState(() {
-                      candleWidth += 2;
-                      candleWidth = min(candleWidth, 20);
-                    });
-                  },
-                  child: Icon(
-                    Icons.add,
-                    color: style.borderColor,
-                  ),
-                ),
-              ],
-              ...widget.actions
-            ],
-          ),
-        ],
-        if (widget.candles.length == 0 || mainWindowDataContainer == null)
+        ToolBar(
+          onZoomInPressed: () {
+            setState(() {
+              candleWidth += 2;
+              candleWidth = min(candleWidth, 16);
+            });
+          },
+          onZoomOutPressed: () {
+            setState(() {
+              candleWidth -= 2;
+              candleWidth = max(candleWidth, 4);
+            });
+          },
+          children: widget.actions,
+        ),
+        if (widget.candles.length == 0)
           Expanded(
             child: Center(
-              child: widget.loadingWidget ??
-                  CircularProgressIndicator(color: style.loadingColor),
+              child: CircularProgressIndicator(
+                color: Theme.of(context).gold,
+              ),
             ),
           )
         else
@@ -189,17 +101,13 @@ class _CandlesticksState extends State<Candlesticks> {
                     Platform.isWindows ||
                     Platform.isLinux) {
                   return DesktopChart(
-                    style: style,
-                    onRemoveIndicator: widget.onRemoveIndicator,
-                    mainWindowDataContainer: mainWindowDataContainer!,
-                    chartAdjust: widget.chartAdjust,
                     onScaleUpdate: (double scale) {
                       scale = max(0.90, scale);
                       scale = min(1.1, scale);
                       setState(() {
                         candleWidth *= scale;
-                        candleWidth = min(candleWidth, 20);
-                        candleWidth = max(candleWidth, 2);
+                        candleWidth = min(candleWidth, 16);
+                        candleWidth = max(candleWidth, 4);
                       });
                     },
                     onPanEnd: () {
@@ -232,17 +140,13 @@ class _CandlesticksState extends State<Candlesticks> {
                   );
                 } else {
                   return MobileChart(
-                    style: style,
-                    onRemoveIndicator: widget.onRemoveIndicator,
-                    mainWindowDataContainer: mainWindowDataContainer!,
-                    chartAdjust: widget.chartAdjust,
                     onScaleUpdate: (double scale) {
                       scale = max(0.90, scale);
                       scale = min(1.1, scale);
                       setState(() {
                         candleWidth *= scale;
-                        candleWidth = min(candleWidth, 20);
-                        candleWidth = max(candleWidth, 2);
+                        candleWidth = min(candleWidth, 16);
+                        candleWidth = max(candleWidth, 4);
                       });
                     },
                     onPanEnd: () {

@@ -1,6 +1,6 @@
 import 'package:candlesticks/src/constant/view_constants.dart';
 import 'package:candlesticks/src/models/candle.dart';
-import 'package:candlesticks/src/models/candle_sticks_style.dart';
+import 'package:candlesticks/src/theme/theme_data.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
@@ -10,7 +10,6 @@ class TimeRow extends StatefulWidget {
   final double? indicatorX;
   final DateTime? indicatorTime;
   final int index;
-  final CandleSticksStyle style;
 
   const TimeRow({
     Key? key,
@@ -19,7 +18,6 @@ class TimeRow extends StatefulWidget {
     this.indicatorX,
     required this.indicatorTime,
     required this.index,
-    required this.style,
   }) : super(key: key);
 
   @override
@@ -46,13 +44,13 @@ class _TimeRowState extends State<TimeRow> {
     int candleNumber = (step + 1) ~/ 2 - 10 + index * step + -1;
     DateTime? _time;
     if (candleNumber < 0)
-      _time = widget.candles[0].date.add(Duration(
-          milliseconds: dif.inMilliseconds ~/ -1 * step * candleNumber));
+      _time = widget.candles[step + candleNumber].date.add(dif);
     else if (candleNumber < widget.candles.length)
       _time = widget.candles[candleNumber].date;
     else {
-      _time = widget.candles[0].date.subtract(
-          Duration(milliseconds: dif.inMilliseconds ~/ step * candleNumber));
+      final stepsBack = (candleNumber - widget.candles.length) ~/ step + 1;
+      final newIndex = candleNumber - stepsBack * step;
+      _time = widget.candles[newIndex].date.subtract(dif * stepsBack);
     }
     return _time;
   }
@@ -99,15 +97,14 @@ class _TimeRowState extends State<TimeRow> {
   @override
   Widget build(BuildContext context) {
     int step = _stepCalculator();
-    final dif =
-        widget.candles[0].date.difference(widget.candles[1].date) * step;
+    final dif = widget.candles[0].date.difference(widget.candles[step].date);
     return Padding(
       padding: const EdgeInsets.only(right: PRICE_BAR_WIDTH + 1.0),
       child: Stack(
         children: [
           ListView.builder(
             physics: NeverScrollableScrollPhysics(),
-            itemCount: math.max(widget.candles.length, 1000),
+            itemCount: widget.candles.length,
             scrollDirection: Axis.horizontal,
             itemExtent: step * widget.candleWidth,
             controller: _scrollController,
@@ -120,12 +117,14 @@ class _TimeRowState extends State<TimeRow> {
                   Expanded(
                     child: Container(
                       width: 0.05,
-                      color: widget.style.borderColor,
+                      color: Theme.of(context).grayColor,
                     ),
                   ),
                   dif.compareTo(Duration(days: 1)) > 0
-                      ? _monthDayText(_time, widget.style.primaryTextColor)
-                      : _hourMinuteText(_time, widget.style.primaryTextColor),
+                      ? _monthDayText(
+                          _time, Theme.of(context).scaleNumbersColor)
+                      : _hourMinuteText(
+                          _time, Theme.of(context).scaleNumbersColor),
                 ],
               );
             },
@@ -136,12 +135,12 @@ class _TimeRowState extends State<TimeRow> {
                   bottom: 0,
                   left: math.max(widget.indicatorX! - 55, 0),
                   child: Container(
-                    color: widget.style.hoverIndicatorBackgroundColor,
+                    color: Theme.of(context).hoverIndicatorBackgroundColor,
                     child: Center(
                       child: Text(
                         dateFormatter(widget.indicatorTime!),
                         style: TextStyle(
-                          color: widget.style.secondaryTextColor,
+                          color: Theme.of(context).hoverIndicatorTextColor,
                           fontSize: 12,
                         ),
                       ),

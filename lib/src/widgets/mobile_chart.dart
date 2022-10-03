@@ -1,15 +1,14 @@
 import 'dart:math';
-import 'package:candlesticks/candlesticks.dart';
 import 'package:candlesticks/src/constant/view_constants.dart';
-import 'package:candlesticks/src/models/main_window_indicator.dart';
+import 'package:candlesticks/src/theme/theme_data.dart';
 import 'package:candlesticks/src/utils/helper_functions.dart';
+import 'package:candlesticks/src/widgets/candle_info_text.dart';
 import 'package:candlesticks/src/widgets/candle_stick_widget.dart';
-import 'package:candlesticks/src/widgets/mainwindow_indicator_widget.dart';
 import 'package:candlesticks/src/widgets/price_column.dart';
 import 'package:candlesticks/src/widgets/time_row.dart';
-import 'package:candlesticks/src/widgets/top_panel.dart';
 import 'package:candlesticks/src/widgets/volume_widget.dart';
 import 'package:flutter/material.dart';
+import '../models/candle.dart';
 import 'dash_line.dart';
 
 /// This widget manages gestures
@@ -36,34 +35,20 @@ class MobileChart extends StatefulWidget {
   /// changes when user scrolls along the chart
   final int index;
 
-  /// holds main window indicators data and high and low prices.
-  final MainWindowDataContainer mainWindowDataContainer;
-
-  /// How chart price range will be adjusted when moving chart
-  final ChartAdjust chartAdjust;
-
-  final CandleSticksStyle style;
-
   final void Function(double) onPanDown;
   final void Function() onPanEnd;
-
-  final void Function(String)? onRemoveIndicator;
 
   final Function() onReachEnd;
 
   MobileChart({
-    required this.style,
     required this.onScaleUpdate,
     required this.onHorizontalDragUpdate,
     required this.candleWidth,
     required this.candles,
     required this.index,
-    required this.chartAdjust,
     required this.onPanDown,
     required this.onPanEnd,
     required this.onReachEnd,
-    required this.mainWindowDataContainer,
-    required this.onRemoveIndicator,
   });
 
   @override
@@ -73,9 +58,20 @@ class MobileChart extends StatefulWidget {
 class _MobileChartState extends State<MobileChart> {
   double? longPressX;
   double? longPressY;
-  bool showIndicatorNames = false;
-  double? manualScaleHigh;
-  double? manualScaleLow;
+  double additionalVerticalPadding = 0;
+
+  double calcutePriceScale(double height, double high, double low) {
+    int minTiles = (height / MIN_PRICETILE_HEIGHT).floor();
+    minTiles = max(2, minTiles);
+    double sizeRange = high - low;
+    double minStepSize = sizeRange / minTiles;
+    double base =
+        pow(10, HelperFunctions.log10(minStepSize).floor()).toDouble();
+
+    if (2 * base > minStepSize) return 2 * base;
+    if (5 * base > minStepSize) return 5 * base;
+    return 10 * base;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -101,49 +97,40 @@ class _MobileChartState extends State<MobileChart> {
             .getRange(candlesStartIndex, candlesEndIndex + 1)
             .toList();
 
-        double candlesHighPrice = 0;
-        double candlesLowPrice = 0;
-        if (manualScaleHigh != null) {
-          candlesHighPrice = manualScaleHigh!;
-          candlesLowPrice = manualScaleLow!;
-        } else if (widget.chartAdjust == ChartAdjust.visibleRange) {
-          candlesHighPrice = widget.mainWindowDataContainer.highs
-              .getRange(candlesStartIndex, candlesEndIndex + 1)
-              .reduce(max);
-          candlesLowPrice = widget.mainWindowDataContainer.lows
-              .getRange(candlesStartIndex, candlesEndIndex + 1)
-              .reduce(min);
-        } else if (widget.chartAdjust == ChartAdjust.fullRange) {
-          candlesHighPrice = widget.mainWindowDataContainer.highs.reduce(max);
-          candlesLowPrice = widget.mainWindowDataContainer.lows.reduce(min);
+        // visible candles highest and lowest price
+        double candlesHighPrice = inRangeCandles.map((e) => e.high).reduce(max);
+        double candlesLowPrice = inRangeCandles.map((e) => e.low).reduce(min);
+
+        // calcute priceScale
+        double chartHeight = maxHeight * 0.75 -
+            2 * (MAIN_CHART_VERTICAL_PADDING + additionalVerticalPadding);
+        double priceScale =
+            calcutePriceScale(chartHeight, candlesHighPrice, candlesLowPrice);
+
+        // high and low calibrations revision
+        candlesHighPrice = (candlesHighPrice ~/ priceScale + 1) * priceScale;
+        candlesLowPrice = (candlesLowPrice ~/ priceScale) * priceScale;
+
+        // calcute highest volume
+        double volumeHigh = 0;
+        for (int i = candlesStartIndex; i <= candlesEndIndex; i++) {
+          volumeHigh = max(widget.candles[i].volume, volumeHigh);
         }
-
-        if (candlesHighPrice == candlesLowPrice) {
-          candlesHighPrice += 10;
-          candlesLowPrice -= 10;
-        }
-
-        // calculate priceScale
-        double chartHeight = maxHeight * 0.75 - 2 * MAIN_CHART_VERTICAL_PADDING;
-
-        // calculate highest volume
-        double volumeHigh = inRangeCandles.map((e) => e.volume).reduce(max);
 
         if (longPressX != null && longPressY != null) {
           longPressX = max(longPressX!, 0);
           longPressX = min(longPressX!, maxWidth);
           longPressY = max(longPressY!, 0);
-          longPressY = min(longPressY!, maxHeight);
+          longPressX = min(longPressX!, maxHeight);
         }
 
         return TweenAnimationBuilder(
           tween: Tween(begin: candlesHighPrice, end: candlesHighPrice),
-          duration: Duration(milliseconds: manualScaleHigh == null ? 300 : 0),
+          duration: Duration(milliseconds: 300),
           builder: (context, double high, _) {
             return TweenAnimationBuilder(
               tween: Tween(begin: candlesLowPrice, end: candlesLowPrice),
-              duration:
-                  Duration(milliseconds: manualScaleHigh == null ? 300 : 0),
+              duration: Duration(milliseconds: 300),
               builder: (context, double low, _) {
                 final currentCandle = longPressX == null
                     ? null
@@ -154,11 +141,10 @@ class _MobileChartState extends State<MobileChart> {
                             0),
                         widget.candles.length - 1)];
                 return Container(
-                  color: widget.style.background,
+                  color: Theme.of(context).background,
                   child: Stack(
                     children: [
                       TimeRow(
-                        style: widget.style,
                         indicatorX: longPressX,
                         candles: widget.candles,
                         candleWidth: widget.candleWidth,
@@ -172,28 +158,25 @@ class _MobileChartState extends State<MobileChart> {
                             child: Stack(
                               children: [
                                 PriceColumn(
-                                  style: widget.style,
                                   low: candlesLowPrice,
                                   high: candlesHighPrice,
+                                  priceScale: priceScale,
                                   width: constraints.maxWidth,
                                   chartHeight: chartHeight,
                                   lastCandle: widget.candles[
                                       widget.index < 0 ? 0 : widget.index],
                                   onScale: (delta) {
-                                    if (manualScaleHigh == null) {
-                                      manualScaleHigh = candlesHighPrice;
-                                      manualScaleLow = candlesLowPrice;
-                                    }
                                     setState(() {
-                                      double deltaPrice = delta /
-                                          chartHeight *
-                                          (manualScaleHigh! - manualScaleLow!);
-                                      manualScaleHigh =
-                                          manualScaleHigh! + deltaPrice;
-                                      manualScaleLow =
-                                          manualScaleLow! - deltaPrice;
+                                      additionalVerticalPadding += delta;
+                                      additionalVerticalPadding = min(
+                                          maxHeight / 4,
+                                          additionalVerticalPadding);
+                                      additionalVerticalPadding =
+                                          max(0, additionalVerticalPadding);
                                     });
                                   },
+                                  additionalVerticalPadding:
+                                      additionalVerticalPadding,
                                 ),
                                 Row(
                                   children: [
@@ -202,7 +185,8 @@ class _MobileChartState extends State<MobileChart> {
                                         decoration: BoxDecoration(
                                           border: Border(
                                             right: BorderSide(
-                                              color: widget.style.borderColor,
+                                              color:
+                                                  Theme.of(context).grayColor,
                                               width: 1,
                                             ),
                                           ),
@@ -211,33 +195,19 @@ class _MobileChartState extends State<MobileChart> {
                                           duration: Duration(milliseconds: 300),
                                           padding: EdgeInsets.symmetric(
                                               vertical:
-                                                  MAIN_CHART_VERTICAL_PADDING),
+                                                  MAIN_CHART_VERTICAL_PADDING +
+                                                      additionalVerticalPadding),
                                           child: RepaintBoundary(
-                                            child: Stack(
-                                              children: [
-                                                MainWindowIndicatorWidget(
-                                                  indicatorDatas: widget
-                                                      .mainWindowDataContainer
-                                                      .indicatorComponentData,
-                                                  index: widget.index,
-                                                  candleWidth:
-                                                      widget.candleWidth,
-                                                  low: low,
-                                                  high: high,
-                                                ),
-                                                CandleStickWidget(
-                                                  candles: widget.candles,
-                                                  candleWidth:
-                                                      widget.candleWidth,
-                                                  index: widget.index,
-                                                  high: high,
-                                                  low: low,
-                                                  bearColor:
-                                                      widget.style.primaryBear,
-                                                  bullColor:
-                                                      widget.style.primaryBull,
-                                                ),
-                                              ],
+                                            child: CandleStickWidget(
+                                              candles: widget.candles,
+                                              candleWidth: widget.candleWidth,
+                                              index: widget.index,
+                                              high: high,
+                                              low: low,
+                                              bearColor:
+                                                  Theme.of(context).primaryRed,
+                                              bullColor: Theme.of(context)
+                                                  .primaryGreen,
                                             ),
                                           ),
                                         ),
@@ -260,7 +230,7 @@ class _MobileChartState extends State<MobileChart> {
                                     decoration: BoxDecoration(
                                       border: Border(
                                         right: BorderSide(
-                                          color: widget.style.borderColor,
+                                          color: Theme.of(context).grayColor,
                                           width: 1,
                                         ),
                                       ),
@@ -273,8 +243,10 @@ class _MobileChartState extends State<MobileChart> {
                                         index: widget.index,
                                         high:
                                             HelperFunctions.getRoof(volumeHigh),
-                                        bearColor: widget.style.secondaryBear,
-                                        bullColor: widget.style.secondaryBull,
+                                        bearColor:
+                                            Theme.of(context).secondaryRed,
+                                        bullColor:
+                                            Theme.of(context).secondaryGreen,
                                       ),
                                     ),
                                   ),
@@ -292,8 +264,8 @@ class _MobileChartState extends State<MobileChart> {
                                               Text(
                                                 "-${HelperFunctions.addMetricPrefix(HelperFunctions.getRoof(volumeHigh))}",
                                                 style: TextStyle(
-                                                  color:
-                                                      widget.style.borderColor,
+                                                  color: Theme.of(context)
+                                                      .grayColor,
                                                   fontSize: 12,
                                                 ),
                                               ),
@@ -320,13 +292,13 @@ class _MobileChartState extends State<MobileChart> {
                                 children: [
                                   DashLine(
                                     length: maxWidth,
-                                    color: widget.style.borderColor,
+                                    color: Theme.of(context).grayColor,
                                     direction: Axis.horizontal,
                                     thickness: 0.5,
                                   ),
                                   Container(
-                                    color: widget
-                                        .style.hoverIndicatorBackgroundColor,
+                                    color: Theme.of(context)
+                                        .hoverIndicatorBackgroundColor,
                                     child: Center(
                                       child: Text(
                                         longPressY! < maxHeight * 0.75
@@ -347,8 +319,8 @@ class _MobileChartState extends State<MobileChart> {
                                                             (maxHeight * 0.25 -
                                                                 10))),
                                         style: TextStyle(
-                                          color:
-                                              widget.style.secondaryTextColor,
+                                          color: Theme.of(context)
+                                              .hoverIndicatorTextColor,
                                           fontSize: 12,
                                         ),
                                       ),
@@ -365,7 +337,7 @@ class _MobileChartState extends State<MobileChart> {
                               child: Container(
                                 width: widget.candleWidth,
                                 height: maxHeight,
-                                color: widget.style.mobileCandleHoverColor,
+                                color: Theme.of(context).gold.withOpacity(0.2),
                               ),
                               right: (maxWidth - longPressX!) ~/
                                       widget.candleWidth *
@@ -373,6 +345,13 @@ class _MobileChartState extends State<MobileChart> {
                                   PRICE_BAR_WIDTH,
                             )
                           : Container(),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 4, horizontal: 12),
+                        child: currentCandle != null
+                            ? CandleInfoText(candle: currentCandle)
+                            : null,
+                      ),
                       Padding(
                         padding: const EdgeInsets.only(right: 50, bottom: 20),
                         child: GestureDetector(
@@ -389,17 +368,6 @@ class _MobileChartState extends State<MobileChart> {
                             if (details.scale == 1) {
                               widget.onHorizontalDragUpdate(
                                   details.focalPoint.dx);
-                              setState(() {
-                                if (manualScaleHigh != null) {
-                                  double deltaPrice =
-                                      details.focalPointDelta.dy /
-                                          chartHeight *
-                                          (manualScaleHigh! - manualScaleLow!);
-                                  manualScaleHigh =
-                                      manualScaleHigh! + deltaPrice;
-                                  manualScaleLow = manualScaleLow! + deltaPrice;
-                                }
-                              });
                             }
                             widget.onScaleUpdate(details.scale);
                           },
@@ -420,45 +388,6 @@ class _MobileChartState extends State<MobileChart> {
                               longPressY = details.localPosition.dy;
                             });
                           },
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 4, horizontal: 12),
-                        child: TopPanel(
-                          style: widget.style,
-                          onRemoveIndicator: widget.onRemoveIndicator,
-                          currentCandle: currentCandle,
-                          indicators: widget.mainWindowDataContainer.indicators,
-                          toggleIndicatorVisibility: (indicatorName) {
-                            setState(() {
-                              widget.mainWindowDataContainer
-                                  .toggleIndicatorVisibility(indicatorName);
-                            });
-                          },
-                          unvisibleIndicators: widget
-                              .mainWindowDataContainer.unvisibleIndicators,
-                        ),
-                      ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        width: PRICE_BAR_WIDTH,
-                        height: 20,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            primary: widget.style.hoverIndicatorBackgroundColor,
-                          ),
-                          child: Text("Auto"),
-                          onPressed: manualScaleHigh == null
-                              ? null
-                              : () {
-                                  setState(() {
-                                    manualScaleHigh = null;
-                                    manualScaleLow = null;
-                                  });
-                                },
                         ),
                       )
                     ],
