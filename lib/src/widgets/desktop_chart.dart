@@ -11,6 +11,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../models/candle.dart';
 import 'dash_line.dart';
+import 'package:flutter/material.dart';
 
 /// This widget manages gestures
 /// Calculates the highest and lowest price of visible candles.
@@ -358,6 +359,54 @@ class _DesktopChartState extends State<DesktopChart> {
                             vertical: 4, horizontal: 12),
                         child: currentCandle != null
                             ? CandleInfoText(candle: currentCandle)
+                            : null,
+                      ),
+                      Container(
+                        child: currentCandle != null
+                            //? CandleThumb(candle: currentCandle, xPos: mouseHoverX, yPos: mouseHoverY,)
+                            ? Positioned(
+                                child:
+                                  Container(
+                                    padding: EdgeInsets.all(7),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: DefaultTextStyle(
+                                          style: TextStyle(color: Colors.white,
+                                          fontSize: 10),
+                                          child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text("종가", textAlign: TextAlign.left,),
+                                              Text("시가"),
+                                              Text("고가"),
+                                              Text("저가"),
+                                              Text("등락률")
+                                          ],),), 
+                                          flex: 3
+                                        ),
+                                        DefaultTextStyle(
+                                          style: TextStyle(color: Colors.white,
+                                          fontSize: 10),
+                                          child: Column(crossAxisAlignment: CrossAxisAlignment.end,
+                                            children: [
+                                            Text(currentCandle.close.toString()),
+                                            Text(currentCandle.open.toString()),
+                                            Text(currentCandle.high.toString()),
+                                            Text(currentCandle.low.toString()),
+                                            Text(currentCandle.diffRatio.toString()+"%"),
+                                          ],),
+                                        ),
+                                    ],
+                                  ),
+                                  width: 90,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(7),
+                                    color: Colors.black.withOpacity(0.8),
+                                  ),
+                                ),
+                              left: mouseHoverX,
+                              top: mouseHoverY)
                             : null,
                       ),
                       Padding(

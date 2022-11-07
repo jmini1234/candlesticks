@@ -26,7 +26,6 @@ class CandleInfoText extends StatelessWidget {
         text: dateFormatter(candle.date),
         style: TextStyle(color: Theme.of(context).grayColor, fontSize: 10),
         children: <TextSpan>[
-          //TextSpan(text : "종목이름"),
           TextSpan(text: " O:"),
           TextSpan(
               text: HelperFunctions.priceToString(candle.open),
@@ -56,6 +55,35 @@ class CandleInfoText extends StatelessWidget {
                       ? Theme.of(context).primaryGreen
                       : Theme.of(context).primaryRed)),
         ],
+      ),
+    );
+  }
+}
+
+class CandleThumb extends StatelessWidget {
+  const CandleThumb({
+    Key? key,
+    required this.candle,
+    double? xPos,
+    double? yPos,
+  }) : super(key: key);
+
+  final Candle candle;
+  final double? xPos = null;
+  final double? yPos = null;
+
+  @override
+  Widget build(BuildContext context) {
+    //String str = candle.diffRatio.toString()+x.toString();
+    print(xPos);
+    //return Positioned(left: xPos, right: yPos, child: Text(candle.diffRatio.toString(), style: Colors.red,));
+    return Container(
+      
+      //color: Colors.red,
+      child: Text(
+        candle.diffRatio.toString(),
+        //str
+        //x.toString()
       ),
     );
   }
