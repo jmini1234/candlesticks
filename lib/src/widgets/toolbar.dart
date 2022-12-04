@@ -36,7 +36,6 @@ class ToolBar extends StatelessWidget {
                 color: Theme.of(context).grayColor,
               ),
             ),
-            ...children
           ],
         ),
       ),

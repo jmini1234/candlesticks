@@ -44,7 +44,9 @@ class _TimeRowState extends State<TimeRow> {
     int candleNumber = (step + 1) ~/ 2 - 10 + index * step + -1;
     DateTime? _time;
     if (candleNumber < 0)
-      _time = widget.candles[step + candleNumber].date.add(dif);
+      // 가장 최근 날짜로 변경
+      //_time = widget.candles[step + candleNumber].date.add(dif);
+      _time = widget.candles[0].date;
     else if (candleNumber < widget.candles.length)
       _time = widget.candles[candleNumber].date;
     else {
@@ -96,8 +98,10 @@ class _TimeRowState extends State<TimeRow> {
 
   @override
   Widget build(BuildContext context) {
+    // candle의 굵기에 따라 계산
     int step = _stepCalculator();
     final dif = widget.candles[0].date.difference(widget.candles[step].date);
+    print(widget.candles[0].date);
     return Padding(
       padding: const EdgeInsets.only(right: PRICE_BAR_WIDTH + 1.0),
       child: Stack(

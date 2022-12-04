@@ -16,7 +16,8 @@ class CandleInfoText extends StatelessWidget {
   }
 
   String dateFormatter(DateTime date) {
-    return "${date.year}-${numberFormat(date.month)}-${numberFormat(date.day)} ${numberFormat(date.hour)}:${numberFormat(date.minute)}";
+    //return "${date.year}-${numberFormat(date.month)}-${numberFormat(date.day)} ${numberFormat(date.hour)}:${numberFormat(date.minute)}";
+    return "${date.year}-${numberFormat(date.month)}-${numberFormat(date.day)}";
   }
 
   @override
@@ -24,7 +25,7 @@ class CandleInfoText extends StatelessWidget {
     return RichText(
       text: TextSpan(
         text: dateFormatter(candle.date),
-        style: TextStyle(color: Theme.of(context).grayColor, fontSize: 10),
+        style: TextStyle(color: Theme.of(context).grayColor, fontSize: 11),
         children: <TextSpan>[
           TextSpan(text: " O:"),
           TextSpan(
