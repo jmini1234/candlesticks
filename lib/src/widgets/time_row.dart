@@ -101,7 +101,6 @@ class _TimeRowState extends State<TimeRow> {
     // candle의 굵기에 따라 계산
     int step = _stepCalculator();
     final dif = widget.candles[0].date.difference(widget.candles[step].date);
-    print(widget.candles[0].date);
     return Padding(
       padding: const EdgeInsets.only(right: PRICE_BAR_WIDTH + 1.0),
       child: Stack(

@@ -370,36 +370,53 @@ class _DesktopChartState extends State<DesktopChart> {
                                     padding: EdgeInsets.all(7),
                                     child: Row(
                                       children: [
-                                        Expanded(
+                                      Expanded(
                                           child: DefaultTextStyle(
-                                          style: TextStyle(color: Colors.white,
-                                          fontSize: 10),
-                                          child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text("종가", textAlign: TextAlign.left,),
-                                              Text("시가"),
-                                              Text("고가"),
-                                              Text("저가"),
-                                              Text("등락률")
-                                          ],),), 
-                                          flex: 3
-                                        ),
-                                        DefaultTextStyle(
-                                          style: TextStyle(color: Colors.white,
-                                          fontSize: 10),
-                                          child: Column(crossAxisAlignment: CrossAxisAlignment.end,
-                                            children: [
-                                            Text(currentCandle.close.toString()),
-                                            Text(currentCandle.open.toString()),
-                                            Text(currentCandle.high.toString()),
-                                            Text(currentCandle.low.toString()),
-                                            Text(currentCandle.diffRatio.toString()+"%"),
-                                          ],),
-                                        ),
+                                            style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 10),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text("종가"),
+                                                Text("시가"),
+                                                Text("고가"),
+                                                Text("저가"),
+                                                Text("등락률")
+                                              ],
+                                            ),
+                                          ),
+                                          flex: 3),
+                                      Expanded(
+                                          child: DefaultTextStyle(
+                                              style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 10),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.center,
+                                                mainAxisAlignment: 
+                                                    MainAxisAlignment.spaceEvenly,
+                                                children: [
+                                                  Text(currentCandle.close
+                                                      .toString(),),
+                                                  Text(currentCandle.open
+                                                      .toString()),
+                                                  Text(currentCandle.high
+                                                      .toString()),
+                                                  Text(currentCandle.low
+                                                      .toString()),
+                                                  Text(currentCandle.diffRatio
+                                                          .toString() +
+                                                      "%"),
+                                                ],
+                                              )),
+                                          flex: 3), 
                                     ],
                                   ),
-                                  width: 90,
-                                  height: 80,
+                                  width: 120,
+                                  height: 90,
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(7),
                                     color: Colors.black.withOpacity(0.8),
